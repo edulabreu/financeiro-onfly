@@ -1,0 +1,482 @@
+{
+  "name": "Processo Seletivo Onfly",
+  "nodes": [
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "{\n  \"requiredColumns\": [\"data\",\"descricao\",\"categoria\",\"centro_custo\",\"valor_usd\"],\n  \"saveDirectory\": \"/tmp/onfly_financeiro\",\n  \"replyFromName\": \"Financeiro Onfly\",\n  \"replySubjectPrefix\": \"Processamento CSV Financeiro\",\n  \"exchangeApiUrl\": \"https://open.er-api.com/v6/latest/USD\"\n}\n",
+        "includeOtherFields": true,
+        "include": "selected",
+        "options": {}
+      },
+      "id": "49766c5d-a868-4479-8e80-b2429d87f3e0",
+      "name": "Set Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -256,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "downloadAttachments": true,
+        "options": {}
+      },
+      "id": "5ab3ad13-a2b7-4800-9108-cb59942a6a2e",
+      "name": "Email Trigger",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 1,
+      "position": [
+        -464,
+        368
+      ],
+      "credentials": {
+        "imap": {
+          "id": "3wLTlmAs0YH0VMB1",
+          "name": "Email GMAIL"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const binary = $input.item.binary || {};\nconst json = $input.item.json || {};\n\nfor (const [key, file] of Object.entries(binary)) {\n  const fileName = (file.fileName || '').toLowerCase();\n  const mimeType = (file.mimeType || '').toLowerCase();\n  const fileExtension = (file.fileExtension || '').toLowerCase();\n\n  if (\n    fileName.endsWith('.csv') ||\n    mimeType.includes('csv') ||\n    fileExtension === 'csv'\n  ) {\n    return {\n      json: {\n        ...json,\n        hasCsv: true,\n        csvBinaryField: key,\n        csvFileName: file.fileName || 'arquivo.csv',\n        senderEmail: json.from?.email || json.from || '',\n        senderName: json.from?.name || '',\n        subjectOriginal: json.subject || '',\n        receivedDate: json.date || new Date().toISOString()\n      },\n      binary\n    };\n  }\n}\n\nreturn {\n  json: {\n    ...json,\n    hasCsv: false,\n    errorMessage: 'Nenhum anexo CSV encontrado no item atual.',\n    senderEmail: json.from?.email || json.from || '',\n    senderName: json.from?.name || '',\n    subjectOriginal: json.subject || '',\n    receivedDate: json.date || new Date().toISOString()\n  },\n  binary\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        368
+      ],
+      "id": "5dadc126-0f87-4ce6-b22f-aa033c5fc419",
+      "name": "Identificar anexo CSV"
+    },
+    {
+      "parameters": {
+        "fromEmail": "eduardolgonzaga@gmail.com",
+        "toEmail": "={{ $('Email Trigger').item.json.from }}",
+        "subject": "={{ $('Set Config').item.json.replySubjectPrefix }}",
+        "emailFormat": "both",
+        "text": "={{ $json.body }}",
+        "html": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        848,
+        240
+      ],
+      "id": "9b29bcac-bb14-4470-bb47-52d4182132fb",
+      "name": "Send an Email",
+      "webhookId": "ebd633d5-e980-4b21-b7bf-b32acf37d708",
+      "credentials": {
+        "smtp": {
+          "id": "K74DvR2b2IAgiBWB",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "eduardolgonzaga@gmail.com",
+        "toEmail": "={{ $('Email Trigger').item.json.from }}",
+        "subject": "={{ $('Set Config').item.json.replySubjectPrefix }}",
+        "emailFormat": "both",
+        "text": "={{ $json.body }}",
+        "html": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1696,
+        320
+      ],
+      "id": "9c82cae6-4094-40bc-a52d-0f237b883ce8",
+      "name": "Send an Email1",
+      "webhookId": "ebd633d5-e980-4b21-b7bf-b32acf37d708",
+      "credentials": {
+        "smtp": {
+          "id": "K74DvR2b2IAgiBWB",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fromEmail": "eduardolgonzaga@gmail.com",
+        "toEmail": "={{ $('Email Trigger').item.json.from }}",
+        "subject": "={{ $('Set Config').item.json.replySubjectPrefix }}",
+        "emailFormat": "both",
+        "text": "={{ $json.body }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        1904,
+        528
+      ],
+      "id": "9885de3a-13ef-4934-9ecd-c026ca9d725f",
+      "name": "Send an Email2",
+      "webhookId": "ebd633d5-e980-4b21-b7bf-b32acf37d708",
+      "credentials": {
+        "smtp": {
+          "id": "K74DvR2b2IAgiBWB",
+          "name": "SMTP account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = $input.first();\nconst binary = item.binary || {};\nconst json = item.json || {};\n\nlet csvBinaryKey = null;\nlet csvFileName = null;\n\nfor (const [key, file] of Object.entries(binary)) {\n  const fileName = (file.fileName || '').toLowerCase();\n  const mimeType = (file.mimeType || '').toLowerCase();\n  if (fileName.endsWith('.csv') || mimeType.includes('csv')) {\n    csvBinaryKey = key;\n    csvFileName = file.fileName || 'anexo.csv';\n    break;\n  }\n}\n\nconst senderEmail =\n  json.from?.value?.[0]?.address ||\n  json.from?.text ||\n  json.from ||\n  json.sender ||\n  '';\n\nconst senderName = json.from?.value?.[0]?.name || '';\n\nreturn [{\n  json: {\n    ...json,\n    senderEmail,\n    senderName,\n    hasCsv: !!csvBinaryKey,\n    csvBinaryKey,\n    csvFileName,\n    savedFilePath: csvFileName ? `Eduardo_Gonzaga_${Date.now()}_${csvFileName}` : null\n  },\n  binary\n}];"
+      },
+      "id": "7715a547-f383-4cf9-b0e3-8caf72fdb40e",
+      "name": "dados CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "5c1c127f-b2a2-47a9-8415-d1a9350c157c",
+              "leftValue": "={{ $json.hasCsv }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "1fbb3cd6-b203-4070-90eb-d66513c2e4df",
+      "name": "IF tem CSV?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        368,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    to: $json.senderEmail,\n    from: $json.replyFrom,\n    subject: '[Financeiro] Nenhum CSV encontrado no e-mail',\n    body: `Olá${$json.senderName ? ' ' + $json.senderName : ''},\n\nRecebemos seu e-mail, mas nenhum anexo CSV foi encontrado.\n\nO processamento não foi executado.\nPor favor, reenvie a mensagem com um arquivo .csv válido.\n\nAssunto original: ${$json.subject || '(sem assunto)'}\n\nAtenciosamente,\nAutomação Financeira`\n  }\n}];"
+      },
+      "id": "670defcb-e471-4e11-b91d-9510d4bfee05",
+      "name": "Email não possui csv",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "={{$json.savedFilePath}}",
+        "dataPropertyName": "={{$json.csvBinaryKey}}",
+        "options": {}
+      },
+      "id": "ed6094b4-e0a6-44f4-82aa-667f5c5aff8e",
+      "name": "Salvar CSV",
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        640,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "binaryPropertyName": "={{$json.csvBinaryField }}",
+        "options": {
+          "headerRow": true
+        }
+      },
+      "id": "94693f2f-4635-49ff-bb83-757a87458d25",
+      "name": "Extrair CSV",
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        864,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst requiredColumns = ['data', 'descricao', 'categoria', 'centro_custo', 'valor_usd'];\n\nfunction normalizeText(v) {\n  if (v === undefined || v === null) return null;\n  const s = String(v).replace(/\\s+/g, ' ').trim();\n  return s === '' ? null : s;\n}\n\nfunction normalizeDate(v) {\n  const s = normalizeText(v);\n  if (!s) return null;\n  if (/^\\d{4}-\\d{2}-\\d{2}$/.test(s)) return s;\n\n  let m = s.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);\n  if (m) return `${m[3]}-${m[2]}-${m[1]}`;\n\n  m = s.match(/^(\\d{2})-(\\d{2})-(\\d{4})$/);\n  if (m) return `${m[3]}-${m[2]}-${m[1]}`;\n\n  return null;\n}\n\nfunction normalizeNumber(v) {\n  if (v === undefined || v === null) return null;\n  let s = String(v).trim();\n  if (!s) return null;\n\n  s = s.replace(/\\s/g, '');\n\n  if (s.includes(',') && s.includes('.')) {\n    if (s.lastIndexOf(',') > s.lastIndexOf('.')) {\n      s = s.replace(/\\./g, '').replace(',', '.');\n    } else {\n      s = s.replace(/,/g, '');\n    }\n  } else if (s.includes(',')) {\n    s = s.replace(',', '.');\n  }\n\n  const n = Number(s);\n  return Number.isFinite(n) ? n : null;\n}\n\nconst headerKeys = rows.length ? Object.keys(rows[0]) : [];\nconst missingColumns = requiredColumns.filter(c => !headerKeys.includes(c));\n\nif (missingColumns.length) {\n  return [{\n    json: {\n      status: 'invalid_structure',\n      headerKeys,\n      missingColumns,\n      totalRowsRead: rows.length,\n      validCount: 0,\n      invalidCount: rows.length\n    }\n  }];\n}\n\nconst validRows = [];\nconst invalidRows = [];\n\nrows.forEach((row, index) => {\n  const line = {\n    data: normalizeDate(row.data),\n    descricao: normalizeText(row.descricao),\n    categoria: normalizeText(row.categoria),\n    centro_custo: normalizeText(row.centro_custo),\n    valor_usd: normalizeNumber(row.valor_usd),\n  };\n\n  const reasons = [];\n  if (!line.data) reasons.push('data inválida');\n  if (!line.descricao) reasons.push('descricao vazia');\n  if (!line.categoria) reasons.push('categoria vazia');\n  if (!line.centro_custo) reasons.push('centro_custo vazio');\n  if (line.valor_usd === null) reasons.push('valor_usd inválido');\n\n  if (reasons.length) {\n    invalidRows.push({\n      rowNumber: index + 2,\n      reason: reasons.join('; '),\n      original: row,\n      normalized: line\n    });\n  } else {\n    validRows.push({\n      rowNumber: index + 2,\n      ...line\n    });\n  }\n});\n\nreturn [{\n  json: {\n    status: 'ok',\n    headerKeys,\n    missingColumns: [],\n    totalRowsRead: rows.length,\n    validCount: validRows.length,\n    invalidCount: invalidRows.length,\n    validRows,\n    invalidRows\n  }\n}];"
+      },
+      "id": "ec138df6-4fe4-440a-9445-c04f7c0d03bf",
+      "name": "Tratar e validar CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1088,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 1
+          },
+          "conditions": [
+            {
+              "id": "66e2c331-409b-4794-8260-4b990cd42653",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "ok",
+              "operator": {
+                "type": "string",
+                "operation": "notEquals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "79ad1753-07dd-4b76-9341-9a6f6a5295ce",
+      "name": "IF extrutura valida?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const meta = $('dados CSV').first().json;\nreturn [{\n  json: {\n    to: meta.senderEmail,\n    from: meta.replyFrom,\n    subject: `[Financeiro] Estrutura inválida no CSV - ${meta.csvFileName}`,\n    body: `Olá${meta.senderName ? ' ' + meta.senderName : ''},\n\nRecebemos o arquivo ${meta.csvFileName}, porém o CSV não possui a estrutura mínima esperada.\n\nColunas obrigatórias ausentes:\n- ${($json.missingColumns || []).join('\\n- ')}\n\nColunas encontradas:\n- ${($json.headerKeys || []).join('\\n- ')}\n\nTotal de linhas lidas: ${$json.totalRowsRead || 0}\n\nO processamento financeiro não foi concluído.\n\nAtenciosamente,\nAutomação Financeira`\n  }\n}];"
+      },
+      "id": "fd1e2cf9-1af7-484a-bc20-8a71d920f805",
+      "name": "Email extrutura invalida",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Set Config').item.json.exchangeApiUrl }}",
+        "options": {}
+      },
+      "id": "17fd3ea6-3ab1-44cd-91de-7bbf837d6fcd",
+      "name": "ER-API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1520,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const finance = $('Tratar e validar CSV').first().json;\nconst meta = $('dados CSV').first().json;\nconst fx = $input.first().json;\n\nconst usdRate = Number(fx.rates?.USD || 1);\nconst brlRate = Number(fx.rates?.BRL || 0);\n\nif (!Number.isFinite(brlRate) || brlRate <= 0) {\n  throw new Error('Cotação USD→BRL inválida.');\n}\n\nconst validRows = finance.validRows || [];\nconst invalidRows = finance.invalidRows || [];\n\nconst enrichedRows = validRows.map(r => {\n  const valor_brl = Number((r.valor_usd * (brlRate / usdRate)).toFixed(2));\n  return {\n    ...r,\n    cotacao_usd_brl: Number((brlRate / usdRate).toFixed(6)),\n    valor_brl\n  };\n});\n\nconst totalUsd = enrichedRows.reduce((acc, r) => acc + r.valor_usd, 0);\nconst totalBrl = enrichedRows.reduce((acc, r) => acc + r.valor_brl, 0);\n\nconst byCategory = {};\nfor (const r of enrichedRows) {\n  const key = r.categoria || 'SEM_CATEGORIA';\n  if (!byCategory[key]) {\n    byCategory[key] = { quantidade: 0, total_usd: 0, total_brl: 0 };\n  }\n  byCategory[key].quantidade += 1;\n  byCategory[key].total_usd += r.valor_usd;\n  byCategory[key].total_brl += r.valor_brl;\n}\n\nfor (const key of Object.keys(byCategory)) {\n  byCategory[key].total_usd = Number(byCategory[key].total_usd.toFixed(2));\n  byCategory[key].total_brl = Number(byCategory[key].total_brl.toFixed(2));\n}\n\nconst categoryLines = Object.entries(byCategory).map(([cat, v]) =>\n  `- ${cat}: ${v.quantidade} registros | USD ${v.total_usd.toFixed(2)} | BRL ${v.total_brl.toFixed(2)}`\n).join('\\n');\n\nconst inconsistencies = invalidRows.length\n  ? invalidRows.slice(0, 20).map(r => `- Linha ${r.rowNumber}: ${r.reason}`).join('\\n')\n  : '- Nenhuma inconsistência relevante';\n\nreturn [{\n  json: {\n    to: meta.senderEmail,\n    from: meta.replyFrom,\n    subject: `[Financeiro] Resultado do processamento - ${meta.csvFileName}`,\n    body: `Olá${meta.senderName ? ' ' + meta.senderName : ''},\n\nProcessamento concluído.\n\nArquivo processado: ${meta.csvFileName}\nRegistros lidos: ${finance.totalRowsRead}\nRegistros válidos: ${enrichedRows.length}\nRegistros inválidos/descartados: ${invalidRows.length}\nCotação do dólar (USD→BRL): ${(brlRate / usdRate).toFixed(6)}\nTotal em USD: ${totalUsd.toFixed(2)}\nTotal em BRL: ${totalBrl.toFixed(2)}\n\nResumo por categoria:\n${categoryLines || '- Sem dados válidos'}\n\nInconsistências encontradas:\n${inconsistencies}\n\nArquivo original salvo em:\n${meta.savedFilePath}\n\nAtenciosamente,\nAutomação Financeira`,\n    summary: {\n      cotacao_usd_brl: Number((brlRate / usdRate).toFixed(6)),\n      totalRowsRead: finance.totalRowsRead,\n      validCount: enrichedRows.length,\n      invalidCount: invalidRows.length,\n      totalUsd: Number(totalUsd.toFixed(2)),\n      totalBrl: Number(totalBrl.toFixed(2)),\n      byCategory,\n      invalidRows\n    }\n  }\n}];"
+      },
+      "id": "4c560b46-cd8a-4878-8735-cfd647ffbc78",
+      "name": "Email Sucesso",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        528
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Set Config": {
+      "main": [
+        [
+          {
+            "node": "Identificar anexo CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Identificar anexo CSV": {
+      "main": [
+        [
+          {
+            "node": "dados CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "dados CSV": {
+      "main": [
+        [
+          {
+            "node": "IF tem CSV?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF tem CSV?": {
+      "main": [
+        [
+          {
+            "node": "Salvar CSV",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Email não possui csv",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email não possui csv": {
+      "main": [
+        [
+          {
+            "node": "Send an Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Salvar CSV": {
+      "main": [
+        [
+          {
+            "node": "Extrair CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extrair CSV": {
+      "main": [
+        [
+          {
+            "node": "Tratar e validar CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tratar e validar CSV": {
+      "main": [
+        [
+          {
+            "node": "IF extrutura valida?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF extrutura valida?": {
+      "main": [
+        [
+          {
+            "node": "Email extrutura invalida",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ER-API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email extrutura invalida": {
+      "main": [
+        [
+          {
+            "node": "Send an Email1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ER-API": {
+      "main": [
+        [
+          {
+            "node": "Email Sucesso",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Sucesso": {
+      "main": [
+        [
+          {
+            "node": "Send an Email2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "f3ddfa7a-61d5-4ced-b6bd-dd2ee7d7efa8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "0ab988fb5de2b87ae49d1419d538378a03d7550779b314ebf529dc718cb99696"
+  },
+  "id": "m9lkWbubPNuLruMh",
+  "tags": []
+}
